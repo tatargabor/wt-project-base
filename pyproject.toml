@@ -7,7 +7,7 @@ name = "wt-project-base"
 version = "0.1.0"
 description = "Base project type plugin for wt-tools — universal project knowledge"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["pyyaml>=5.0"]
 
 [project.scripts]
 wt-project-base = "wt_project_base.cli:main"

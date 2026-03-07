@@ -8,12 +8,14 @@ from wt_project_base.base import (
     VerificationRule,
 )
 from wt_project_base.project_type import BaseProjectType
+from wt_project_base.resolver import ProjectTypeResolver
 
 __all__ = [
     "BaseProjectType",
     "OrchestrationDirective",
     "ProjectType",
     "ProjectTypeInfo",
+    "ProjectTypeResolver",
     "TemplateInfo",
     "VerificationRule",
 ]

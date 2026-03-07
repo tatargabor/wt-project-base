@@ -6,3 +6,6 @@ build/
 .eggs/
 *.egg
 .venv/
+
+# Local overrides (personal, not shared)
+.local-overrides.yaml
