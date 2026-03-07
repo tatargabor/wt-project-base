@@ -76,9 +76,13 @@ class ProjectType(ABC):
 
     def get_template_dir(self, template_id: str) -> Optional[Path]:
         """Return the directory containing template files for a variant."""
+        import inspect
+
         for tmpl in self.get_templates():
             if tmpl.id == template_id:
-                pkg_dir = Path(__file__).parent
+                # Resolve relative to the concrete subclass's module, not the base
+                cls_file = inspect.getfile(type(self))
+                pkg_dir = Path(cls_file).parent
                 return pkg_dir / tmpl.template_dir
         return None
 

@@ -44,6 +44,59 @@ def _load_project_type_from_dir(project_dir: Path):
     return BaseProjectType(), pt_file
 
 
+def _load_project_type_by_name(type_name: str):
+    """Load a project type class by name via entry points."""
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        from importlib_metadata import entry_points  # type: ignore
+
+    try:
+        eps = entry_points(group="wt_tools.project_types")
+    except TypeError:
+        eps = entry_points().get("wt_tools.project_types", [])
+
+    for ep in eps:
+        if ep.name == type_name:
+            cls = ep.load()
+            return cls()
+
+    return None
+
+
+def cmd_deploy_templates(args):
+    """Deploy template files from a project type into a target project."""
+    from wt_project_base.deploy import deploy_templates
+
+    project_dir = Path(args.project_dir).resolve()
+
+    # Load project type by name
+    pt = _load_project_type_by_name(args.type)
+    if pt is None:
+        print(f"Error: project type '{args.type}' not found", file=sys.stderr)
+        sys.exit(1)
+
+    template_id = getattr(args, "template", None)
+
+    try:
+        messages = deploy_templates(
+            pt, template_id, project_dir,
+            force=args.force, dry_run=args.dry_run,
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    action = "Dry run" if args.dry_run else "Template deploy"
+    print(f"{action} ({pt.info.name}/{template_id or 'auto'}) → {project_dir}")
+    for msg in messages:
+        print(msg)
+
+    deployed = sum(1 for m in messages if "Deployed" in m or "Overwritten" in m or "Would" in m)
+    skipped = sum(1 for m in messages if "Skipped" in m)
+    print(f"\n  {deployed} deployed, {skipped} skipped")
+
+
 def cmd_resolve(args):
     """Resolve and display merged rules and directives."""
     from wt_project_base.resolver import ProjectTypeResolver
@@ -148,6 +201,14 @@ def main() -> None:
     subparsers.add_parser("directives", help="List base orchestration directives")
     subparsers.add_parser("info", help="Show project type info")
 
+    # Deploy templates command
+    deploy_parser = subparsers.add_parser("deploy-templates", help="Deploy template files from a project type")
+    deploy_parser.add_argument("--project-dir", required=True, help="Target project directory")
+    deploy_parser.add_argument("--type", required=True, help="Project type name (e.g., web)")
+    deploy_parser.add_argument("--template", default=None, help="Template variant (e.g., nextjs)")
+    deploy_parser.add_argument("--force", action="store_true", help="Overwrite existing files")
+    deploy_parser.add_argument("--dry-run", action="store_true", help="Show what would be deployed")
+
     # Resolve command
     resolve_parser = subparsers.add_parser("resolve", help="Show merged rules and directives for a project")
     resolve_parser.add_argument("--project-dir", default=".", help="Project directory (default: current)")
@@ -170,7 +231,9 @@ def main() -> None:
     args = parser.parse_args()
     pt = BaseProjectType()
 
-    if args.command == "rules":
+    if args.command == "deploy-templates":
+        cmd_deploy_templates(args)
+    elif args.command == "rules":
         for rule in pt.get_verification_rules():
             print(f"  [{rule.severity:7s}] {rule.id}: {rule.description}")
     elif args.command == "directives":
