@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wt-project-base"
+version = "0.1.0"
+description = "Base project type plugin for wt-tools — universal project knowledge"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+wt-project-base = "wt_project_base.cli:main"
+
+[project.entry-points."wt_tools.project_types"]
+base = "wt_project_base:BaseProjectType"

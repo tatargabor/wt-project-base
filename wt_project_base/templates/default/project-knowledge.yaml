@@ -1,0 +1,22 @@
+version: 1
+
+# Cross-cutting files — files touched by multiple features
+# Map logical roles to file paths so the orchestrator can detect conflicts
+cross_cutting_files: {}
+  # example:
+  # config:
+  #   - src/config.ts
+  # ci:
+  #   - .github/workflows/ci.yml
+
+# Feature registry — logical features mapped to file scopes
+features: {}
+  # example:
+  # auth:
+  #   touches:
+  #     - src/auth/
+  #   description: Authentication and authorization
+
+# Verification rules are provided by the project type plugin.
+# Override or extend them in this file if needed.
+verification_overrides: {}
