@@ -1,20 +1,22 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  wt-project-base is the abstract base layer of the wt-tools project type plugin system.
+  It is never used directly — every project needs a concrete plugin (wt-project-web,
+  wt-project-python, wt-project-laravel, etc.) that extends this base.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Tech stack: Python 3.9+, PyYAML
+  Build: hatchling
+  Entry point group: wt_tools.project_types
+
+  Key modules:
+  - base.py: ProjectType ABC + dataclasses (VerificationRule, OrchestrationDirective, etc.)
+  - project_type.py: BaseProjectType with universal rules and directives
+  - resolver.py: Merges package rules with YAML overlays (project-type.yaml + .local-overrides)
+  - deploy.py: Manifest-based template deployment with module selection
+  - feedback.py: Anonymized rule feedback/lesson collection
+
+  Conventions:
+  - All artifacts and documentation in English
+  - This is an open-source library — no project-specific references in artifacts
+  - Plugin authors subclass ProjectType and register via entry points

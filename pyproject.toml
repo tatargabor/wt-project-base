@@ -12,5 +12,11 @@ dependencies = ["pyyaml>=5.0"]
 [project.scripts]
 wt-project-base = "wt_project_base.cli:main"
 
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
 [project.entry-points."wt_tools.project_types"]
 base = "wt_project_base:BaseProjectType"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
