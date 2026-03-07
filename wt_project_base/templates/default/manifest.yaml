@@ -1,0 +1,8 @@
+core:
+  - project-knowledge.yaml
+
+modules:
+  data-privacy:
+    description: "Data privacy & retention (GDPR, suppression, export, import dedup)"
+    files:
+      - rules/data-privacy.md

@@ -1,8 +1,14 @@
 """Deploy template files from a project type package into a target project."""
 
 import shutil
+import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
 
 from wt_project_base.base import ProjectType
 
@@ -29,6 +35,79 @@ def _target_path(template_rel: str, target_dir: Path) -> Path:
 
     # Default: same relative path
     return target_dir / template_rel
+
+
+def _load_manifest(template_dir: Path) -> Optional[Dict[str, Any]]:
+    """Load manifest.yaml from a template directory, or None if absent."""
+    manifest_path = template_dir / "manifest.yaml"
+    if not manifest_path.exists():
+        return None
+    if yaml is None:
+        warnings.warn("PyYAML not installed — manifest.yaml not available")
+        return None
+    with open(manifest_path) as f:
+        data = yaml.safe_load(f)
+    return data if isinstance(data, dict) else None
+
+
+def get_available_modules(template_dir: Path) -> Dict[str, str]:
+    """Return {module_id: description} for optional modules in a template.
+
+    Returns empty dict if no manifest or no modules.
+    """
+    manifest = _load_manifest(template_dir)
+    if not manifest or "modules" not in manifest:
+        return {}
+    modules = manifest.get("modules", {})
+    return {mid: mdef.get("description", "") for mid, mdef in modules.items()}
+
+
+def _resolve_file_list(
+    template_dir: Path,
+    manifest: Optional[Dict[str, Any]],
+    modules: Optional[List[str]],
+) -> Tuple[List[str], List[str]]:
+    """Resolve the list of template-relative files to deploy.
+
+    Returns (files_to_deploy, warnings).
+    """
+    warns: List[str] = []
+
+    if manifest is None:
+        # No manifest — deploy all files (backward compat), skip manifest itself
+        files = []
+        for src in sorted(template_dir.rglob("*")):
+            if src.is_dir():
+                continue
+            rel = str(src.relative_to(template_dir))
+            if rel == "manifest.yaml":
+                continue
+            files.append(rel)
+        return files, warns
+
+    # Build file list from core + selected modules
+    files: List[str] = list(manifest.get("core", []))
+
+    available_modules = manifest.get("modules", {})
+    if modules:
+        for mid in modules:
+            if mid not in available_modules:
+                names = ", ".join(available_modules.keys())
+                warns.append(f"Unknown module '{mid}'. Available: {names}")
+                continue
+            mod_files = available_modules[mid].get("files", [])
+            files.extend(mod_files)
+
+    # Validate all referenced files exist
+    validated = []
+    for rel in files:
+        src = template_dir / rel
+        if not src.exists():
+            warns.append(f"Manifest references missing file: {rel}")
+        else:
+            validated.append(rel)
+
+    return validated, warns
 
 
 def resolve_template(
@@ -73,6 +152,7 @@ def deploy_templates(
     project_type: ProjectType,
     template_id: Optional[str],
     target_dir: Path,
+    modules: Optional[List[str]] = None,
     force: bool = False,
     dry_run: bool = False,
 ) -> List[str]:
@@ -81,14 +161,17 @@ def deploy_templates(
     Returns a list of status messages for each file (deployed/skipped/overwritten).
     """
     resolved_id, template_dir = resolve_template(project_type, template_id)
+    manifest = _load_manifest(template_dir)
     messages: List[str] = []
 
-    # Walk the template directory and copy files
-    for src_path in sorted(template_dir.rglob("*")):
-        if src_path.is_dir():
-            continue
+    file_list, warns = _resolve_file_list(template_dir, manifest, modules)
 
-        rel = str(src_path.relative_to(template_dir))
+    for w in warns:
+        messages.append(f"  Warning: {w}")
+
+    # Deploy files
+    for rel in file_list:
+        src_path = template_dir / rel
         dst = _target_path(rel, target_dir)
 
         if dst.exists() and not force:
@@ -104,5 +187,16 @@ def deploy_templates(
             shutil.copy2(src_path, dst)
 
         messages.append(f"  {verb}: {dst.relative_to(target_dir)}")
+
+    # Show available optional modules if manifest exists and none were selected
+    if manifest and not modules:
+        available = manifest.get("modules", {})
+        if available:
+            messages.append("")
+            messages.append("  Optional modules available:")
+            for mid, mdef in available.items():
+                desc = mdef.get("description", "")
+                messages.append(f"    - {mid}: {desc}")
+            messages.append("  Use --modules <name,...> to deploy optional modules")
 
     return messages

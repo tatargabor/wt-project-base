@@ -9,3 +9,4 @@ build/
 
 # Local overrides (personal, not shared)
 .local-overrides.yaml
+wt/.work/

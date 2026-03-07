@@ -77,11 +77,14 @@ def cmd_deploy_templates(args):
         sys.exit(1)
 
     template_id = getattr(args, "template", None)
+    modules = None
+    if args.modules:
+        modules = [m.strip() for m in args.modules.split(",") if m.strip()]
 
     try:
         messages = deploy_templates(
             pt, template_id, project_dir,
-            force=args.force, dry_run=args.dry_run,
+            modules=modules, force=args.force, dry_run=args.dry_run,
         )
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -206,6 +209,7 @@ def main() -> None:
     deploy_parser.add_argument("--project-dir", required=True, help="Target project directory")
     deploy_parser.add_argument("--type", required=True, help="Project type name (e.g., web)")
     deploy_parser.add_argument("--template", default=None, help="Template variant (e.g., nextjs)")
+    deploy_parser.add_argument("--modules", default=None, help="Comma-separated optional module IDs (e.g., gdpr,integrations)")
     deploy_parser.add_argument("--force", action="store_true", help="Overwrite existing files")
     deploy_parser.add_argument("--dry-run", action="store_true", help="Show what would be deployed")
 
