@@ -45,8 +45,12 @@ def _load_manifest(template_dir: Path) -> Optional[Dict[str, Any]]:
     if yaml is None:
         warnings.warn("PyYAML not installed — manifest.yaml not available")
         return None
-    with open(manifest_path) as f:
-        data = yaml.safe_load(f)
+    try:
+        with open(manifest_path) as f:
+            data = yaml.safe_load(f)
+    except (yaml.YAMLError, UnicodeDecodeError) as e:
+        warnings.warn(f"Failed to parse manifest.yaml: {e}")
+        return None
     return data if isinstance(data, dict) else None
 
 
@@ -98,9 +102,13 @@ def _resolve_file_list(
             mod_files = available_modules[mid].get("files", [])
             files.extend(mod_files)
 
-    # Validate all referenced files exist
+    # Deduplicate (module file might already be in core) and validate
+    seen: set = set()
     validated = []
     for rel in files:
+        if rel in seen:
+            continue
+        seen.add(rel)
         src = template_dir / rel
         if not src.exists():
             warns.append(f"Manifest references missing file: {rel}")

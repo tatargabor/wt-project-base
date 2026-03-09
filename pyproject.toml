@@ -18,5 +18,11 @@ dev = ["pytest>=7.0"]
 [project.entry-points."wt_tools.project_types"]
 base = "wt_project_base:BaseProjectType"
 
+[tool.hatch.build.targets.wheel]
+packages = ["wt_project_base"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"wt_project_base/templates" = "wt_project_base/templates"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
