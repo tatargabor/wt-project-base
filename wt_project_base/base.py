@@ -183,3 +183,17 @@ class ProjectType(ABC):
         Examples: ["node_modules", ".venv", "target"]
         """
         return []
+
+    def gate_overrides(self, change_type: str) -> dict:
+        """Return gate config overrides for a change_type.
+
+        Project-type plugins override this to customize gate behavior.
+        Returns dict of GateConfig field names to values.
+
+        Example:
+            def gate_overrides(self, change_type):
+                if change_type == "foundational":
+                    return {"e2e": "run"}  # web projects want e2e on auth
+                return {}
+        """
+        return {}
