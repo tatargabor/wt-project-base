@@ -93,3 +93,93 @@ class ProjectType(ABC):
     def get_all_orchestration_directives(self) -> List[OrchestrationDirective]:
         """Return orchestration directives including inherited ones from parent types."""
         return self.get_orchestration_directives()
+
+    # --- Profile methods (engine integration) ---
+    # All have default implementations for backward compat.
+
+    def planning_rules(self) -> str:
+        """Quality patterns for the decompose/planning prompt.
+
+        Returns a text block appended to core planning rules.
+        Should include security patterns, testing conventions, and
+        architecture constraints specific to this project type.
+        """
+        return ""
+
+    def security_rules_paths(self, project_path: str) -> List[Path]:
+        """Paths to security rule files for review retry context.
+
+        These files get loaded and injected into the retry prompt
+        when code review finds CRITICAL issues.
+        """
+        return []
+
+    def security_checklist(self) -> str:
+        """Security checklist items for proposal.md template.
+
+        Returns markdown checklist lines injected into the
+        Security Checklist section of render_proposal().
+        """
+        return ""
+
+    def generated_file_patterns(self) -> List[str]:
+        """Glob patterns for generated files that can be auto-resolved during merge.
+
+        These files get 'ours' strategy during merge conflicts.
+        Examples: "*.tsbuildinfo", "pnpm-lock.yaml", ".next/**"
+        """
+        return []
+
+    def lockfile_pm_map(self) -> List[tuple]:
+        """Mapping of lockfile names to package manager commands.
+
+        Used for PM detection, bootstrap, post-merge install.
+        Example: [("pnpm-lock.yaml", "pnpm"), ("yarn.lock", "yarn")]
+        """
+        return []
+
+    def detect_package_manager(self, project_path: str) -> Optional[str]:
+        """Detect the package manager for this project.
+
+        Default implementation uses lockfile_pm_map().
+        """
+        d = Path(project_path)
+        for lockfile, pm in self.lockfile_pm_map():
+            if (d / lockfile).is_file():
+                return pm
+        return None
+
+    def detect_test_command(self, project_path: str) -> Optional[str]:
+        """Detect the test command for this project."""
+        return None
+
+    def detect_build_command(self, project_path: str) -> Optional[str]:
+        """Detect the build command for this project."""
+        return None
+
+    def detect_dev_server(self, project_path: str) -> Optional[str]:
+        """Detect the dev server start command for this project."""
+        return None
+
+    def bootstrap_worktree(self, project_path: str, wt_path: str) -> bool:
+        """Install dependencies in a new worktree.
+
+        Called after worktree creation. Should install deps but not
+        modify source. Returns True on success.
+        """
+        return True
+
+    def post_merge_install(self, project_path: str) -> bool:
+        """Install dependencies after a merge.
+
+        Called after successful merge on main branch.
+        Returns True on success.
+        """
+        return True
+
+    def ignore_patterns(self) -> List[str]:
+        """Patterns to ignore during digest/codemap generation.
+
+        Examples: ["node_modules", ".venv", "target"]
+        """
+        return []
